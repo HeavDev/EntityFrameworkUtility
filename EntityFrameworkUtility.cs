@@ -1,11 +1,5 @@
 public static class EntityFrameworkUtility
     {
-        #region Delegates
-
-        public delegate void PerformSave();
-
-        #endregion
-
         #region Load
 
         public static IQueryable<TEntity> Load<TEntity>(Expression<Func<TEntity, bool>> whereExpr) where TEntity : class
@@ -54,7 +48,7 @@ public static class EntityFrameworkUtility
             {
                 ThreadPool.QueueUserWorkItem(x =>
                 {
-                    t_entities_error_logs.Save(ex, entity, null, null, null);
+                    // error logging save here
                 });
                 throw ex;
             }
@@ -80,7 +74,7 @@ public static class EntityFrameworkUtility
                         {
                             context = new FamusEntities();
                             context.Configuration.AutoDetectChangesEnabled = false;
-                            //context.Configuration.ValidateOnSaveEnabled = false;
+                            //context.Configuration.ValidateOnSaveEnabled = false; still testing
 
                             int count = 1;
                             foreach (TEntity entity in entities)
@@ -93,7 +87,7 @@ public static class EntityFrameworkUtility
                                     context.Dispose();
                                     context = new FamusEntities();
                                     context.Configuration.AutoDetectChangesEnabled = false;
-                                    //context.Configuration.ValidateOnSaveEnabled = false;
+                                    //context.Configuration.ValidateOnSaveEnabled = false; still testing
                                 }
 
                                 count++;
@@ -111,16 +105,14 @@ public static class EntityFrameworkUtility
             {
                 ThreadPool.QueueUserWorkItem(x =>
                 {
-                    t_entities_error_logs.Save(ex, entities, null, null, null);
+                    // error logging save here
                 });
                 throw ex;
             }
         }
 
-        public static void InsertWithSpecificID<TEntity>(this TEntity entity, PerformSave saveFunc = null) where TEntity : class
+        public static void InsertWithSpecificID<TEntity>(this TEntity entity) where TEntity : class
         {
-            saveFunc?.Invoke();
-
             FamusEntities db = new FamusEntities();
             {
                 string tableName = db.GetTableNameFromContext<TEntity>();
@@ -172,7 +164,7 @@ public static class EntityFrameworkUtility
             {
                 ThreadPool.QueueUserWorkItem(x =>
                 {
-                    t_entities_error_logs.Save(ex, entity, null, null, null);
+                    // error logging save here
                 });
                 throw ex;
             }
@@ -198,7 +190,7 @@ public static class EntityFrameworkUtility
                         {
                             context = new FamusEntities();
                             context.Configuration.AutoDetectChangesEnabled = false;
-                            //context.Configuration.ValidateOnSaveEnabled = false;
+                            //context.Configuration.ValidateOnSaveEnabled = false; still testing
 
                             int count = 1;
                             foreach (TEntity entity in entities)
@@ -212,7 +204,7 @@ public static class EntityFrameworkUtility
                                     context.Dispose();
                                     context = new FamusEntities();
                                     context.Configuration.AutoDetectChangesEnabled = false;
-                                    //context.Configuration.ValidateOnSaveEnabled = false;
+                                    //context.Configuration.ValidateOnSaveEnabled = false; still testing
                                 }
 
                                 count++;
@@ -230,7 +222,7 @@ public static class EntityFrameworkUtility
             {
                 ThreadPool.QueueUserWorkItem(x =>
                 {
-                    t_entities_error_logs.Save(ex, entities, null, null, null);
+                    // error logging save here
                 });
                 throw ex;
             }
