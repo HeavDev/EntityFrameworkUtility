@@ -4,36 +4,46 @@ using System.Transactions;
 
 public static class EntityFrameworkUtility
 {
-    private static string _connectionString = "";
+    private static DbContextOptionsBuilder<ApplicationDbContext> dbOptions;
 
     public static void Init(string connectionString)
     {
-        _connectionString = connectionString;
+        dbOptions = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlServer(connectionString, x => x.MigrationsAssembly("Entities")).UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
     }
 
-    public static IQueryable<TEntity> Load<TEntity>(Expression<Func<TEntity, bool>> whereExpr) where TEntity : class
+    public static ApplicationDbContext InitializeDbContext()
     {
-        return InitializeDbContext().Set<TEntity>().Where(whereExpr);
+        return new ApplicationDbContext(dbOptions.Options);
     }
 
-    public static IQueryable<TResult> Load<TEntity, TResult>(Expression<Func<TEntity, bool>> whereExpr, Expression<Func<TEntity, TResult>> selectExpr) where TEntity : class
+    public static IQueryable<TEntity> Load<TEntity>(Expression<Func<TEntity, bool>> whereExpr, ApplicationDbContext context = null) where TEntity : class
     {
-        return InitializeDbContext().Set<TEntity>().Where(whereExpr).Select(selectExpr);
+        context ??= InitializeDbContext();
+        return context.Set<TEntity>().Where(whereExpr);
     }
 
-    public static IQueryable<TEntity> LoadAll<TEntity>() where TEntity : class
+    public static IQueryable<TResult> Load<TEntity, TResult>(Expression<Func<TEntity, bool>> whereExpr, Expression<Func<TEntity, TResult>> selectExpr, ApplicationDbContext context = null) where TEntity : class
     {
-        return InitializeDbContext().Set<TEntity>();
+        context ??= InitializeDbContext();
+        return context.Set<TEntity>().Where(whereExpr).Select(selectExpr);
     }
 
-    public static IQueryable<TResult> LoadAll<TEntity, TResult>(Expression<Func<TEntity, TResult>> selectExpr) where TEntity : class
+    public static IQueryable<TEntity> LoadAll<TEntity>(ApplicationDbContext context = null) where TEntity : class
     {
-        return InitializeDbContext().Set<TEntity>().Select(selectExpr);
+        context ??= InitializeDbContext();
+        return context.Set<TEntity>();
     }
 
-    public static bool Any<TEntity>(Expression<Func<TEntity, bool>> anyExpr) where TEntity : class
+    public static IQueryable<TResult> LoadAll<TEntity, TResult>(Expression<Func<TEntity, TResult>> selectExpr, ApplicationDbContext context = null) where TEntity : class
     {
-        return InitializeDbContext().Set<TEntity>().Any(anyExpr);
+        context ??= InitializeDbContext();
+        return context.Set<TEntity>().Select(selectExpr);
+    }
+
+    public static bool Any<TEntity>(Expression<Func<TEntity, bool>> anyExpr, ApplicationDbContext context = null) where TEntity : class
+    {
+        context ??= InitializeDbContext();
+        return context.Set<TEntity>().Any(anyExpr);
     }
 
     /// <summary>
@@ -41,17 +51,15 @@ public static class EntityFrameworkUtility
     /// </summary>
     /// <typeparam name="TEntity"></typeparam>
     /// <param name="entity"></param>
-    public static void Save<TEntity>(this TEntity entity) where TEntity : class
+    public static void Save<TEntity>(this TEntity entity, ApplicationDbContext context = null) where TEntity : class
     {
         try
         {
             if (entity != null)
             {
-                ApplicationDbContext db = InitializeDbContext();
-                {
-                    db.Set<TEntity>().Update(entity);
-                    db.SaveChanges();
-                }
+                context ??= InitializeDbContext();
+                context.Set<TEntity>().Update(entity);
+                context.SaveChanges();
             }
         }
         catch (Exception ex)
@@ -76,7 +84,7 @@ public static class EntityFrameworkUtility
 
         try
         {
-            if (entities.Count() > 0)
+            if (entities.Any())
             {
                 using (TransactionScope scope = new TransactionScope())
                 {
@@ -85,7 +93,6 @@ public static class EntityFrameworkUtility
                     try
                     {
                         context = InitializeDbContext();
-                        context.ChangeTracker.AutoDetectChangesEnabled = false;
 
                         int count = 1;
                         foreach (TEntity entity in entities)
@@ -97,7 +104,6 @@ public static class EntityFrameworkUtility
                                 context.SaveChanges();
                                 context.Dispose();
                                 context = InitializeDbContext();
-                                context.ChangeTracker.AutoDetectChangesEnabled = false;
                             }
 
                             count++;
@@ -133,17 +139,17 @@ public static class EntityFrameworkUtility
     /// </summary>
     /// <typeparam name="TEntity"></typeparam>
     /// <param name="entity"></param>
-    public static void HardDelete<TEntity>(this TEntity entity) where TEntity : class
+    public static void HardDelete<TEntity>(this TEntity entity, ApplicationDbContext context = null) where TEntity : class
     {
         try
         {
             if (entity != null)
             {
-                ApplicationDbContext db = InitializeDbContext();
+                context ??= InitializeDbContext();
                 {
-                    db.Set<TEntity>().Attach(entity);
-                    db.Set<TEntity>().Remove(entity);
-                    db.SaveChanges();
+                    context.Set<TEntity>().Attach(entity);
+                    context.Set<TEntity>().Remove(entity);
+                    context.SaveChanges();
                 }
             }
         }
@@ -178,7 +184,6 @@ public static class EntityFrameworkUtility
                     try
                     {
                         context = InitializeDbContext();
-                        context.ChangeTracker.AutoDetectChangesEnabled = false;
 
                         int count = 1;
                         foreach (TEntity entity in entities)
@@ -220,14 +225,6 @@ public static class EntityFrameworkUtility
 
             throw;
         }
-    }
-
-    private static ApplicationDbContext InitializeDbContext()
-    {
-        DbContextOptionsBuilder<ApplicationDbContext> builder = new DbContextOptionsBuilder<ApplicationDbContext>();
-        builder.UseSqlServer(_connectionString);
-
-        return new ApplicationDbContext(builder.Options);
     }
 
     private static string? GetTableNameFromContext<T>(this DbContext context) where T : class
